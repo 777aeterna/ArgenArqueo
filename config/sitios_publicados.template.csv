@@ -1,0 +1,5 @@
+# Copiar a data/validation/sitios_publicados.csv (fuera del repo) y completar.
+# Solo sitios PUBLICADOS (CONICET, CADIC, revistas con referato), cada uno con su cita.
+# precision_m: incertidumbre de la coordenada publicada (p.ej. 1000 si se ubicó por mapa).
+# NO incluir entierros (chenques) ni sitios con ubicación protegida.
+site_id,name,lat,lon,precision_m,province,site_type,reference
