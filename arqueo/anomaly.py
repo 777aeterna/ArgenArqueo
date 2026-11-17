@@ -62,6 +62,32 @@ class Timer:
         return {k: round(v, 3) for k, v in self.t.items()}
 
 
+def split_components(score: np.ndarray, mask: np.ndarray, h: float) -> np.ndarray:
+    """Componentes conexas separadas por watershed sobre el score.
+
+    Un umbral fijo hace percolar anomalías vecinas en redes de km². Se usan como
+    marcadores los h-máximos del score (picos con prominencia >= h, en unidades
+    de umbral): una región con un solo pico queda entera; una red con varios
+    picos prominentes se divide en sus cuencas. No hay tamaño presupuesto.
+    """
+    from skimage.morphology import h_maxima
+    from skimage.segmentation import watershed
+    sc = np.where(mask, np.nan_to_num(score), 0).astype(np.float32)
+    lab0, n0 = ndimage.label(mask, structure=np.ones((3, 3)))
+    if n0 == 0:
+        return lab0
+    sm = ndimage.gaussian_filter(sc, 1.0)
+    peaks = h_maxima(sm, h) & mask
+    markers, _ = ndimage.label(peaks, structure=np.ones((3, 3)))
+    # componentes sin marcador (meseta plana) conservan su etiqueta original
+    nomark = np.setdiff1d(np.unique(lab0[mask]), np.unique(lab0[markers > 0]))
+    if len(nomark):
+        extra = np.isin(lab0, nomark)
+        markers[extra] = lab0[extra] + markers.max()
+    ws = watershed(-sm, markers, mask=mask, connectivity=2)
+    return ws.astype(np.int32)
+
+
 def _popcount8(a: np.ndarray) -> np.ndarray:
     return np.unpackbits(a[..., None], axis=-1).sum(-1)
 
@@ -233,6 +259,9 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
         comp = temporal_composites(stacks, dates)
     water_freq = np.where(nobs > 0, nwater / np.maximum(nobs, 1), np.nan).astype(np.float32)
     perm_water = water_wc | (water_freq > 0.5)
+    # Píxeles mixtos agua/tierra (efecto de adyacencia de S2): no evaluables, no "sin hallazgos"
+    shore = ndimage.binary_dilation(perm_water, iterations=P["shore_buffer_px"]) & ~perm_water \
+        if perm_water.any() else np.zeros(shape, bool)
     dist_water = (ndimage.distance_transform_edt(~perm_water) * res).astype(np.float32) \
         if perm_water.any() else np.full(shape, 1e6, np.float32)
 
@@ -253,7 +282,7 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
         s1_info = dict(error=str(e))
 
     for kname in comp:
-        comp[kname][perm_water | forest] = np.nan
+        comp[kname][perm_water | forest | shore] = np.nan
 
     # ---------------------------------------------------------------- scores por escala
     zthr, cthr = P["persist_z_thr"], P["composite_z_thr"]
@@ -289,12 +318,13 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
         a_p = zp.max(0) / zthr
         a_c = np.nanmax(np.abs(np.nan_to_num(zc, nan=0)), axis=0) / cthr if len(zc) else np.zeros_like(a_p)
         score = np.maximum(a_p, a_c).astype(np.float32)
-        score[perm_water | forest] = np.nan
+        score[perm_water | forest | shore] = np.nan
         score_maps[sm] = score
         mask = np.nan_to_num(score) >= 1.0
-        labels, nlab = ndimage.label(mask, structure=np.ones((3, 3)))
-        sizes = ndimage.sum_labels(np.ones_like(labels), labels, index=np.arange(1, nlab + 1))
-        small = np.where(sizes < P["min_component_px"])[0] + 1
+        labels = split_components(score, mask, P["watershed_h"])
+        sizes = np.bincount(labels.ravel())
+        small = np.where(sizes < P["min_component_px"])[0]
+        small = small[small > 0]
         if len(small):
             labels[np.isin(labels, small)] = 0
         timer.add(f"scale_{sm}m_components", time.perf_counter() - t0)
@@ -322,8 +352,9 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
                 sign = int(np.sign(np.mean(zp_sign[fp][sl][m])))
             iy = np.unravel_index(np.argmax(np.where(m, score[sl], -np.inf)), m.shape)
             py, px_ = sl[0].start + iy[0], sl[1].start + iy[1]
-            fpi = fp
-            yrs = posy[fpi, si, py, px_] if sign >= 0 else negy[fpi, si, py, px_]
+            # años con excedencia: del rasgo de persistencia más fuerte, con SU signo
+            psign = zp_sign[fp][py, px_]
+            yrs = posy[fp, si, py, px_] if psign >= 0 else negy[fp, si, py, px_]
             dsc.update(
                 scale_m=sm, dominant_feature=dom, sign=sign,
                 persist_z=float(pers_means[fp]),

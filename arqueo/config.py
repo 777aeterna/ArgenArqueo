@@ -54,6 +54,8 @@ PARAMS: dict = {
     # permanente); 3 sombra, 8-10 nubes/cirros, 11 nieve, 0-2,7 dudosos: fuera.
     "scl_valid": [4, 5],
     "scl_water": [6],
+    # borde de píxeles mixtos alrededor del agua permanente que no se evalúa (adyacencia)
+    "shore_buffer_px": 2,
     # --- Sentinel-1 RTC (Planetary Computer) ---
     "s1_max_scenes": 60,               # submuestreo temporal uniforme (costo)
     # --- Multiescala ---
@@ -65,6 +67,8 @@ PARAMS: dict = {
     "persist_z_thr": 6.0,
     "composite_z_thr": 4.0,
     "min_component_px": 2,
+    # prominencia mínima (en unidades de umbral) de un pico para separar componentes
+    "watershed_h": 0.5,
     # --- Bosque ---
     "forest_classes_worldcover": [10],  # Tree cover
     "hansen_treecover_thr": 60,        # % dosel => cerrado
@@ -86,7 +90,7 @@ COMPOSITE_FEATURES = [
 
 
 # Subir cuando cambie el algoritmo de forma que altere resultados: invalida el hash.
-ALGO_VERSION = "0.1.1"
+ALGO_VERSION = "0.1.3"
 
 
 def param_hash(extra: dict | None = None) -> str:
