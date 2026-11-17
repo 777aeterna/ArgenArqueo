@@ -7,6 +7,10 @@ name = "arqueo-patagonia"
 version = "0.1.0"
 description = "Prospección arqueológica remota por detección de anomalías sin plantilla (Patagonia austral)"
 requires-python = ">=3.10"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "arqueo-patagonia contributors" }]
+keywords = ["arqueologia", "teledeteccion", "patagonia", "sentinel-2", "anomalias"]
 dependencies = [
   "numpy", "scipy", "scikit-learn", "scikit-image", "opencv-python-headless",
   "pystac-client", "stackstac", "planetary-computer", "rasterio", "xarray", "dask",
