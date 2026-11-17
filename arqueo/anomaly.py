@@ -199,6 +199,7 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
                 process_date(ti, d, data[d.isoformat()])
                 ti += 1
             del data
+            log.info("%s: %d/%d fechas procesadas", cell.cell_id, ti, T)
     for s in stacks.values():
         s.flush()
 
@@ -207,6 +208,8 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
         comp = temporal_composites(stacks, dates)
     water_freq = np.where(nobs > 0, nwater / np.maximum(nobs, 1), np.nan).astype(np.float32)
     perm_water = water_wc | (water_freq > 0.5)
+    dist_water = (ndimage.distance_transform_edt(~perm_water) * res).astype(np.float32) \
+        if perm_water.any() else np.full(shape, 1e6, np.float32)
 
     s1_info = {}
     try:
@@ -304,6 +307,7 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
                 n_valid_dates=int(nvalid[fp][sl][m].mean()),
                 years_hit=int(_popcount8(np.array([yrs], np.uint8))[0]),
                 water_freq=float(np.nanmean(water_freq[sl][m])),
+                dist_water_m=float(dist_water[py, px_]),
                 peak_row=int(py), peak_col=int(px_),
             )
             for ci, cn in enumerate(comp_names):
