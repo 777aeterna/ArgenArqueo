@@ -1,0 +1,26 @@
+# Todo producto con coordenadas queda FUERA del repo. Al repo va solo el código.
+data/
+outputs/
+*.gpkg
+*.gpkg-*
+*.tif
+*.tiff
+*.vrt
+*.sqlite
+*.db
+*.parquet
+*.geojson
+*.shp
+*.shx
+*.dbf
+*.prj
+*.kml
+*.kmz
+*.csv
+!config/*.template.csv
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+build/
+dist/

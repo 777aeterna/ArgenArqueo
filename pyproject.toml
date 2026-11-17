@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arqueo-patagonia"
+version = "0.1.0"
+description = "Prospección arqueológica remota por detección de anomalías sin plantilla (Patagonia austral)"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy", "scipy", "scikit-learn", "scikit-image", "opencv-python-headless",
+  "pystac-client", "stackstac", "planetary-computer", "rasterio", "xarray", "dask",
+  "geopandas", "shapely", "pyproj", "pyogrio", "requests", "matplotlib",
+]
+
+[project.scripts]
+arqueo = "arqueo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["arqueo*"]
