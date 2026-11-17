@@ -25,21 +25,33 @@ def to_gdf(cell, result: dict) -> gpd.GeoDataFrame:
     return g.to_crs(4326)
 
 
-def write(cell, result: dict, path=None) -> int:
-    """Reemplaza las filas de la celda (idempotente) en el GeoPackage."""
-    path = path or config.CANDIDATES_GPKG
-    path.parent.mkdir(parents=True, exist_ok=True)
+def cell_path(cell_id: str):
+    return config.OUT / "cells" / cell_id / "candidates.gpkg"
+
+
+def write(cell, result: dict) -> int:
+    """Escribe los candidatos de UNA celda en su propio GeoPackage (seguro con varios
+    workers en paralelo; idempotente: reemplaza el archivo de la celda)."""
     g = to_gdf(cell, result)
-    old = read(path)
-    if len(old):
-        old = old[old["cell_id"] != cell.cell_id]
-    if len(g) == 0 and len(old) == 0:
+    path = cell_path(cell.cell_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    if len(g):
+        tmp = path.with_suffix(".tmp.gpkg")
+        g.to_file(tmp, layer=LAYER, driver="GPKG")
+        tmp.replace(path)
+    return len(g)
+
+
+def merge_all(cell_ids: list[str], path=None) -> int:
+    """Une los GeoPackages por celda (solo celdas 'done') en el archivo maestro."""
+    path = path or config.CANDIDATES_GPKG
+    parts = [gpd.read_file(cell_path(c), layer=LAYER) for c in cell_ids if cell_path(c).exists()]
+    if not parts:
         return 0
-    allg = pd.concat([old, g], ignore_index=True) if len(old) else g
-    allg = gpd.GeoDataFrame(allg, geometry="geometry", crs=4326)
-    tmp = path.with_suffix(".tmp.gpkg")
-    allg.to_file(tmp, layer=LAYER, driver="GPKG")
-    tmp.replace(path)
+    g = gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), geometry="geometry", crs=4326)
+    save_all(g, path)
     return len(g)
 
 
