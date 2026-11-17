@@ -1,0 +1,47 @@
+{
+ "n_celdas": 9,
+ "area_km2": 900,
+ "n_candidatos": 373146,
+ "n_restringidos_no_publicados": 2611,
+ "por_escala": {
+  "50": 114493,
+  "150": 78871,
+  "500": 68455,
+  "1500": 58265,
+  "5000": 53062
+ },
+ "por_bucket": {
+  "NO_CLASIFICABLE": 319153,
+  "morfologia_descrita": 40530,
+  "moderno_historico": 13463
+ },
+ "clases_bibliograficas": {
+  "ninguna": 329895,
+  "conchero_costero": 29416,
+  "hoyada_de_deflacion": 5531,
+  "pirca_o_recinto_rectilineo": 5220,
+  "rastrillada_o_senda": 473
+ },
+ "segundos_por_celda": [
+  597.572,
+  571.947,
+  497.297,
+  559.718,
+  551.465,
+  566.762,
+  552.25,
+  588.972,
+  371.076
+ ],
+ "fechas_utiles_por_celda": [
+  388,
+  383,
+  376,
+  393,
+  387,
+  380,
+  392,
+  383,
+  324
+ ]
+}
