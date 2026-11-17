@@ -60,6 +60,10 @@ morfologías conocidas: eso es un sesgo del instrumento. Por eso:
 | 4 · validación | `validate.py` | recall@N, modelo nulo con el mismo prior, lift; números crudos |
 | salida | `chips.py`, `export.py`, `satellogic.py`, `corona.py` | fichas multiescala, export sin clase restringida, recortes Satellogic 1 m, CORONA/HEXAGON vía USGS M2M |
 
+> 📘 **Guía completa paso a paso** (de dónde salen los datos, qué hace cada
+> comando, cómo leer los resultados y cómo cargar sitios de validación):
+> [docs/GUIA_DE_USO.md](docs/GUIA_DE_USO.md)
+
 ## Instalación
 
 ```bash
@@ -87,7 +91,11 @@ arqueo triage                          # OSM + rareza + buckets
 arqueo validate                        # requiere data/validation/sitios_publicados.csv
 arqueo chips --top 50
 arqueo export --top 500                # NUNCA incluye la clase restringida
+arqueo demo --dest ejemplo             # versión pública sin georreferencia
 ```
+
+**No hay que descargar datos a mano:** el programa lee las imágenes
+directamente desde catálogos STAC públicos, solo la ventana de cada celda.
 
 Variables de entorno opcionales: `ARQUEO_THREADS` (hilos por worker),
 `ARQUEO_OVERPASS` (servidor Overpass), `USGS_M2M_USERNAME` y `USGS_M2M_TOKEN`

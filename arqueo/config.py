@@ -90,7 +90,7 @@ COMPOSITE_FEATURES = [
 
 
 # Subir cuando cambie el algoritmo de forma que altere resultados: invalida el hash.
-ALGO_VERSION = "0.1.3"
+ALGO_VERSION = "0.1.4"
 
 
 def param_hash(extra: dict | None = None) -> str:

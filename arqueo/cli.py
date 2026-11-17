@@ -135,6 +135,12 @@ def cmd_export(a):
     print(export.export(a.top, a.format, not a.no_modern))
 
 
+def cmd_demo(a):
+    from pathlib import Path
+    from . import demo
+    print(json.dumps(demo.build(Path(a.dest), a.top, a.chips), indent=1, ensure_ascii=False, default=int))
+
+
 def main(argv=None):
     p = argparse.ArgumentParser("arqueo", description=__doc__)
     p.add_argument("-v", "--verbose", action="store_true")
@@ -159,6 +165,9 @@ def main(argv=None):
     s = sp.add_parser("export"); s.add_argument("--top", type=int)
     s.add_argument("--format", choices=["gpkg", "geojson"], default="gpkg")
     s.add_argument("--no-modern", action="store_true"); s.set_defaults(f=cmd_export)
+    s = sp.add_parser("demo", help="demo pública sin georreferencia (sin restringidos)")
+    s.add_argument("--dest", default="ejemplo"); s.add_argument("--top", type=int, default=500)
+    s.add_argument("--chips", type=int, default=30); s.set_defaults(f=cmd_demo)
     a = p.parse_args(argv)
     _setup_logging(a.verbose)
     config.ensure_dirs()

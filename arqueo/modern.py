@@ -11,6 +11,7 @@ import logging
 import time
 
 import geopandas as gpd
+import numpy as np
 import requests
 from shapely.geometry import LineString, Point, Polygon
 
@@ -48,6 +49,28 @@ def _overpass(bbox_ll, retries=4):
                 last = str(ex)
         time.sleep(5 * (i + 1))
     raise RuntimeError(f"Overpass no respondió: {last}")
+
+
+def prefetch(cells: list[Cell], refresh: bool = False) -> int:
+    """Una sola consulta Overpass para el bbox conjunto de las celdas sin caché.
+
+    Los servidores públicos penalizan muchas consultas chicas; una grande para un
+    bloque contiguo es mucho más rápida. Cada celda recibe la respuesta completa
+    (el cruce espacial posterior filtra lo que le corresponde).
+    """
+    todo = [c for c in cells if refresh or not (config.DATA / "osm" / f"{c.cell_id}.json").exists()]
+    if not todo:
+        return 0
+    bbs = np.array([bbox_lonlat(c, 500) for c in todo])
+    bb = (bbs[:, 0].min(), bbs[:, 1].min(), bbs[:, 2].max(), bbs[:, 3].max())
+    if (bb[2] - bb[0]) * (bb[3] - bb[1]) > 1.0:      # > ~1 grado²: no es un bloque contiguo
+        return 0
+    data = json.dumps(_overpass(bb))
+    for c in todo:
+        p = config.DATA / "osm" / f"{c.cell_id}.json"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(data)
+    return len(todo)
 
 
 def _classify(tags: dict) -> str:

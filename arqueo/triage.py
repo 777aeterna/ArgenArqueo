@@ -117,7 +117,11 @@ def triage(refresh_osm: bool = False, min_population: int = 200) -> pd.DataFrame
         return g
     con = connect()
     cells = {r["cell_id"]: row_to_cell(r) for r in con.execute("SELECT * FROM cells").fetchall()}
-    # 1) moderno (por celda, con caché de Overpass)
+    # 1) moderno (por celda, con caché de Overpass; una consulta por bloque contiguo)
+    try:
+        modern.prefetch([cells[c] for c in g["cell_id"].unique() if c in cells], refresh_osm)
+    except Exception as e:
+        log.warning("prefetch OSM falló (%s); se intenta por celda", e)
     parts = []
     for cid, sub in g.groupby("cell_id"):
         cell = cells.get(cid)

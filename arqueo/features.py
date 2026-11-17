@@ -36,6 +36,9 @@ def per_date(b: dict, valid: np.ndarray) -> dict[str, np.ndarray]:
             "r1112": np.log((b["swir16"] + EPS) / (b["swir22"] + EPS)),
             "r42": np.log((red + EPS) / (blue + EPS)),
         }
+    # NDVI indefinido con reflectancias casi nulas (agua, sombra residual): fuera de [-1, 1]
+    dark = (nir + red) < 0.02
+    f["ndvi"] = np.where(dark | (f["ndvi"] < -1) | (f["ndvi"] > 1), np.nan, f["ndvi"])
     for k in f:
         a = f[k].astype(np.float32)
         a[~valid | ~np.isfinite(a)] = np.nan
