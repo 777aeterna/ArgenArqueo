@@ -2,8 +2,9 @@
 
 Qué se publica:
 - tabla del top-N (sin clase restringida) con descriptores y scores, y
-  coordenadas RELATIVAS en metros con un corrimiento aleatorio secreto: las
-  distancias entre candidatos se conservan, la ubicación absoluta no;
+  coordenadas LOCALES en metros (origen en el centroide del bloque y una
+  rotación secreta): las distancias entre candidatos se conservan; la
+  orientación y la ubicación absoluta no;
 - ids anonimizados (sin id de celda, que codifica la posición UTM);
 - fichas con recortes RGB de solo 500 m (ventanas grandes con costa permiten
   ubicar el lugar comparando con un mapa), mapas de score de 1.5 km y la
@@ -12,7 +13,7 @@ Qué se publica:
 
 Qué NO se publica nunca: candidatos restringidos (posibles chenques),
 rasters completos, GeoPackages, CRS ni coordenadas absolutas.
-El corrimiento secreto se guarda solo en outputs/ (fuera del repo).
+La rotación secreta se guarda solo en outputs/ (fuera del repo).
 """
 from __future__ import annotations
 
@@ -44,7 +45,7 @@ def _offset():
     p = config.OUT / "demo_secret_offset.json"
     if p.exists():
         return json.loads(p.read_text())
-    off = {"dx": secrets.randbelow(200_000) - 100_000, "dy": secrets.randbelow(200_000) - 100_000}
+    off = {"theta_deg": secrets.randbelow(36000) / 100.0}
     p.write_text(json.dumps(off))
     return off
 
@@ -98,8 +99,15 @@ def build(dest, top: int = 500, n_chips: int = 30, title: str = "") -> dict:
     n_restricted = int(g["restricted"].astype(bool).sum())
     g = g[~g["restricted"].astype(bool)].sort_values("rank").copy()
     off = _offset()
-    g["x_rel_m"] = (g["x"] + off["dx"]).round(-1)
-    g["y_rel_m"] = (g["y"] + off["dy"]).round(-1)
+    if "theta_deg" not in off:          # caché de una versión anterior: regenerar
+        (config.OUT / "demo_secret_offset.json").unlink()
+        off = _offset()
+    # origen local en el centroide del conjunto + rotación secreta: se conservan las
+    # distancias entre candidatos; se pierden orientación y ubicación absoluta.
+    th = np.radians(off["theta_deg"])
+    dx, dy = g["x"] - g["x"].mean(), g["y"] - g["y"].mean()
+    g["x_rel_m"] = (dx * np.cos(th) - dy * np.sin(th)).round(-1)
+    g["y_rel_m"] = (dx * np.sin(th) + dy * np.cos(th)).round(-1)
     g["demo_id"] = [f"cand_{i:05d}" for i in range(1, len(g) + 1)]
     dest.mkdir(parents=True, exist_ok=True)
     (dest / "fichas").exists() and shutil.rmtree(dest / "fichas")
