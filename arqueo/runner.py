@@ -42,9 +42,12 @@ def _worker(wid: int, tier: str | None, cell_ids: list[str] | None, max_dates: i
 
 
 def run(tier: str | None = None, workers: int = 1, limit: int | None = None,
-        cells: list[str] | None = None, max_dates: int | None = None) -> int:
+        cells: list[str] | None = None, max_dates: int | None = None, force: bool = False) -> int:
     config.ensure_dirs()
     con = state.connect()
+    if force and cells:
+        with state.tx(con):
+            con.executemany("UPDATE cells SET status='pending' WHERE cell_id=?", [(c,) for c in cells])
     phash = config.param_hash()
     if limit and not cells:
         q = ("SELECT cell_id FROM cells WHERE (status IN ('pending','error') OR "

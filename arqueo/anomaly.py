@@ -118,6 +118,23 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
         return dict(status="forest_gap", forest_frac=core_forest_frac, water_frac=core_water_frac,
                     timings=timer.as_dict(), candidates=[])
 
+    # ---------------------------------------------------------------- contexto topográfico
+    # (solo contexto para el triaje; no entra en la detección)
+    with timer("io_dem"):
+        try:
+            dem30 = stac.load_dem(bl, bounds, cell.epsg, 30)
+            dem = stac.resample_to(dem30, bounds, 30, bounds, res, cell.epsg) if dem30 is not None else None
+        except Exception as e:
+            log.warning("DEM no disponible: %s", e)
+            dem = None
+    if dem is not None:
+        dfill = np.where(np.isfinite(dem), dem, np.nanmedian(dem) if np.isfinite(dem).any() else 0)
+        tpi = (dfill - ndimage.uniform_filter(dfill, 31)).astype(np.float32)        # ±150 m
+        gy, gx = np.gradient(dfill, res)
+        slope = np.degrees(np.arctan(np.hypot(gx, gy))).astype(np.float32)
+    else:
+        tpi = slope = np.full(shape, np.nan, np.float32)
+
     # ---------------------------------------------------------------- Sentinel-2
     with timer("s2_search"):
         by_date = stac.search_s2(bl)
@@ -316,6 +333,8 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
                 years_hit=int(_popcount8(np.array([yrs], np.uint8))[0]),
                 water_freq=float(np.nanmean(water_freq[sl][m])),
                 dist_water_m=float(dist_water[py, px_]),
+                tpi_m=float(tpi[py, px_]),
+                slope_deg=float(slope[py, px_]),
                 peak_row=int(py), peak_col=int(px_),
             )
             for ci, cn in enumerate(comp_names):

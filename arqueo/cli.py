@@ -41,7 +41,7 @@ def cmd_prior(a):
     from concurrent.futures import ProcessPoolExecutor
     from . import prior
     con = state.connect()
-    todo = _cells(con, a.tier, a.limit, "" if a.force else "AND prior_json IS NULL")
+    todo = _cells(con, a.tier, a.limit, "" if a.force else "AND (prior_json IS NULL OR prior_json LIKE '%\"error\"%')")
     print(f"prior: {len(todo)} celdas")
     if a.workers > 1:
         with ProcessPoolExecutor(a.workers) as ex:
@@ -98,7 +98,7 @@ def cmd_rank(a):
 
 def cmd_run(a):
     from . import runner
-    runner.run(a.tier, a.workers, a.limit, a.cells, a.max_dates)
+    runner.run(a.tier, a.workers, a.limit, a.cells, a.max_dates, a.force)
 
 
 def cmd_status(a):
@@ -148,6 +148,7 @@ def main(argv=None):
     s = sp.add_parser("run"); s.add_argument("--tier"); s.add_argument("--workers", type=int, default=1)
     s.add_argument("--limit", type=int); s.add_argument("--cells", nargs="*")
     s.add_argument("--max-dates", type=int, help="solo pruebas de costo: submuestrea fechas")
+    s.add_argument("--force", action="store_true", help="reprocesa --cells aunque estén al día")
     s.set_defaults(f=cmd_run)
     s = sp.add_parser("status"); s.add_argument("--timings", action="store_true"); s.set_defaults(f=cmd_status)
     s = sp.add_parser("triage"); s.add_argument("--refresh-osm", action="store_true"); s.set_defaults(f=cmd_triage)

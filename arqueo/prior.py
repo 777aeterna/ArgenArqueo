@@ -109,6 +109,8 @@ def cell_metrics(cell: Cell) -> dict:
     bounds = cell.bounds(margin)
     bl = bbox_lonlat(cell, margin)
     dem = stac.load_dem(bl, bounds, cell.epsg, RES)
+    if dem is None:     # sin tiles de DEM: mar abierto
+        return {"land_frac": 0.0, "tephra": tephra_index(cell.lon, cell.lat)}
     wc = stac.load_worldcover(bl, bounds, cell.epsg, RES)
     m = int(margin / RES)
     core = (slice(m, dem.shape[0] - m), slice(m, dem.shape[1] - m))

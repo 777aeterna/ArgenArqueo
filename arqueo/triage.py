@@ -54,10 +54,14 @@ def _literature_rules(d: pd.DataFrame) -> list[tuple[str, pd.Series, bool]]:
     ndvi_neg = d.get("z_ndvi_med", pd.Series(0, index=d.index)).fillna(0) < -1.0
     near_water = d.get("dist_water_m", pd.Series(1e6, index=d.index)).fillna(1e6) < 1500
     compact = d["compactness"].fillna(0) > 0.5
+    tpi = d.get("tpi_m", pd.Series(np.nan, index=d.index))
+    # sin DEM no se puede descartar la posición elevada: se asume elevada (conservador)
+    elevated = tpi.isna() | (tpi > 1.0)
     return [
-        # chenque: estructura de piedra pequeña y compacta (a 10 m apenas 1-6 px).
-        # Conservador a propósito: ante la duda se restringe.
-        ("posible_chenque_o_estructura_de_piedra", (a <= 600) & compact & (bright_pos | (d["sign"] > 0)), True),
+        # chenque: túmulo de piedra pequeño y compacto, descrito típicamente en
+        # posiciones elevadas (lomadas, bordes de meseta, cerritos). A 10 m ocupa
+        # 1-6 px. Conservador a propósito: ante la duda se restringe.
+        ("posible_chenque_o_estructura_de_piedra", (a <= 600) & compact & bright_pos & elevated, True),
         # conchero/basural costero: claro, poco vegetado, cerca de agua.
         ("conchero_costero", (a > 600) & (a <= 50_000) & bright_pos & near_water, False),
         # hoyada de deflación (blowout) con material expuesto

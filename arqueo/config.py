@@ -85,8 +85,12 @@ COMPOSITE_FEATURES = [
 ]
 
 
+# Subir cuando cambie el algoritmo de forma que altere resultados: invalida el hash.
+ALGO_VERSION = "0.1.1"
+
+
 def param_hash(extra: dict | None = None) -> str:
-    p = dict(PARAMS)
+    p = dict(PARAMS, _algo=ALGO_VERSION)
     if extra:
         p.update(extra)
     blob = json.dumps(p, sort_keys=True, default=str).encode()
