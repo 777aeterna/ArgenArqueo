@@ -34,7 +34,7 @@ def _overpass(bbox_ll, retries=4):
     s, w, n, e = bbox_ll[1], bbox_ll[0], bbox_ll[3], bbox_ll[2]
     body = "".join(f"{t}({s},{w},{n},{e});" for t in QUERY_TAGS)
     q = f"[out:json][timeout:120];({body});out geom;"
-    urls = [config.OVERPASS_URL] + [u for u in config.__dict__.get("OVERPASS_MIRRORS", [])]
+    urls = [config.OVERPASS_URL] + list(config.OVERPASS_MIRRORS)
     last = None
     for i in range(retries):
         for url in urls:

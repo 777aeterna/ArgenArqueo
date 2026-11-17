@@ -167,23 +167,30 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
             ok = np.isfinite(x)
             nvalid[fi][ok] += 1
             base_n[fi] += ok.sum()
-            for si, w in enumerate(scales_px):
-                t0 = time.perf_counter()
-                z = zscore(x, w)
-                timer.add(f"scale_{P['scales_m'][si]}m_perdate", time.perf_counter() - t0)
-                hp = z > k
-                hn = z < -k
-                pos[fi, si][hp] += 1
-                neg[fi, si][hn] += 1
-                posy[fi, si][hp] |= year_bit[d.year]
-                negy[fi, si][hn] |= year_bit[d.year]
-                base_exc[fi, si, 0] += hp.sum()
-                base_exc[fi, si, 1] += hn.sum()
-        if frac.get(d.isoformat(), 0) > 0.9 and len(rgb_keep) < 24:
+
+        def one(fi_si):
+            fi, si = fi_si
+            t0 = time.perf_counter()
+            z = zscore(f[F[fi]], scales_px[si])
+            timer.add(f"scale_{P['scales_m'][si]}m_perdate", time.perf_counter() - t0)
+            hp = z > k
+            hn = z < -k
+            # cada (fi, si) escribe en su propia rebanada: sin carreras entre hilos
+            pos[fi, si][hp] += 1
+            neg[fi, si][hn] += 1
+            posy[fi, si][hp] |= year_bit[d.year]
+            negy[fi, si][hn] |= year_bit[d.year]
+            base_exc[fi, si, 0] += hp.sum()
+            base_exc[fi, si, 1] += hn.sum()
+        t0 = time.perf_counter()
+        list(cpu_pool.map(one, [(fi, si) for fi in range(len(F)) for si in range(S)]))
+        timer.add("multiscale_perdate_wall", time.perf_counter() - t0)
+        if frac.get(d.isoformat(), 0) > 0.9 and len(rgb_keep) < 12:
             rgb_keep.append(np.stack([b["red"], b["green"], b["blue"]]).astype(np.float16))
 
     # Lectura en lotes con prefetch: la E/S del lote i+1 se solapa con el cómputo del i.
-    batch = 16
+    batch = 8
+    cpu_pool = ThreadPoolExecutor(max_workers=config.THREADS)
     batches = [dates[i:i + batch] for i in range(0, T, batch)]
     iso = lambda ds: [d.isoformat() for d in ds]  # noqa: E731
     with ThreadPoolExecutor(max_workers=1) as io_pool:
@@ -200,6 +207,7 @@ def run_cell(cell: Cell, workdir: Path | None = None, max_dates: int | None = No
                 ti += 1
             del data
             log.info("%s: %d/%d fechas procesadas", cell.cell_id, ti, T)
+    cpu_pool.shutdown()
     for s in stacks.values():
         s.flush()
 

@@ -24,10 +24,18 @@ CANDIDATES_GPKG = OUT / "candidates.gpkg"
 STAC_EARTH_SEARCH = "https://earth-search.aws.element84.com/v1"
 STAC_PLANETARY = "https://planetarycomputer.microsoft.com/api/stac/v1"
 OVERPASS_URL = os.environ.get("ARQUEO_OVERPASS", "https://overpass-api.de/api/interpreter")
+OVERPASS_MIRRORS = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 WORLDCOVER_URL = ("https://esa-worldcover.s3.eu-central-1.amazonaws.com/v200/2021/map/"
                   "ESA_WorldCover_10m_2021_v200_{tile}_Map.tif")
 HANSEN_URL = ("https://storage.googleapis.com/earthenginepartners-hansen/GFC-2023-v1.11/"
               "Hansen_GFC-2023-v1.11_treecover2000_{tile}.tif")
+
+# Hilos de cómputo por worker (no afecta resultados: fuera de PARAMS y del hash)
+THREADS = int(os.environ.get("ARQUEO_THREADS", 4))
 
 PARAMS: dict = {
     # --- Grilla ---
