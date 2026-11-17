@@ -442,7 +442,8 @@ def save_cell_products(cell, outdir, transform, core, score_maps, comp, rgb_keep
     # Serie temporal del píxel pico de cada candidato (para las fichas)
     rows = np.array([d["peak_row"] for d in candidates], int)
     cols = np.array([d["peak_col"] for d in candidates], int)
-    ts = {f: np.asarray(stacks[f][:, rows, cols], np.float32) if len(rows) else np.zeros((len(dates), 0))
+    # float16: la serie es para inspección visual en las fichas; la mitad de disco
+    ts = {f: np.asarray(stacks[f][:, rows, cols], np.float16) if len(rows) else np.zeros((len(dates), 0), np.float16)
           for f in stacks}
     np.savez_compressed(outdir / "timeseries.npz", dates=np.array([d.isoformat() for d in dates]),
                         rows=rows, cols=cols, **ts)
